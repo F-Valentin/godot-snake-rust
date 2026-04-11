@@ -59,6 +59,8 @@ impl IArea2D for Snake {
 
         self.base_mut().signals().area_entered().connect_other(&gd, Self::_on_area_entered);
         self.base_mut().set_physics_process(false);
+        let head: Gd<ColorRect> = self.base().get_node_as("head");
+        self.segments.push(head);
     }
 
     fn unhandled_input(&mut self, event: Gd<InputEvent>) {
@@ -122,6 +124,15 @@ impl IArea2D for Snake {
 impl Snake {
     fn add_segment(&mut self) {
         let segment: Gd<ColorRect> = ColorRect::new_alloc();
+        let last_segment = self.segments.last().unwrap().get_position();
+        let pos = match self.direction {
+                Direction::Right => Vector2::new(last_segment.x - CELL_SIZE as f32, last_segment.y),
+                Direction::Left => Vector2::new(last_segment.x + CELL_SIZE as f32, last_segment.y),
+                Direction::Down => Vector2::new(,last_segment.y - CELL_SIZE as f32 + 30.0),
+                Direction::Up => last_segment.y - CELL_SIZE as f32 - 30.0,
+                _ => Default::default(),
+            };
+
     }
 
     fn _on_area_entered(&mut self, area: Gd<Area2D>) {
