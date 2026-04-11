@@ -1,0 +1,13 @@
+[gd_scene format=3 uid="uid://dmnawpbqngvcb"]
+
+[ext_resource type="Script" uid="uid://dc4d6fl230jw0" path="res://main.gd" id="1_ig7tw"]
+[ext_resource type="PackedScene" uid="uid://bi7e3gw4v2i6i" path="res://snake.tscn" id="2_0xm2m"]
+[ext_resource type="PackedScene" uid="uid://bn1ka2j8rn3di" path="res://apple.tscn" id="3_h2yge"]
+
+[node name="Main" type="Node2D" unique_id=737694058]
+script = ExtResource("1_ig7tw")
+
+[node name="Snake" parent="." unique_id=1685693984 instance=ExtResource("2_0xm2m")]
+
+[node name="Apple" parent="." unique_id=1465049458 instance=ExtResource("3_h2yge")]
+position = Vector2(270, 450)
