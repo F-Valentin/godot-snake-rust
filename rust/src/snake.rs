@@ -174,8 +174,8 @@ impl Snake {
         godot_print!("seg grid coord: {}", grid_coord);
         godot_print!("seg world coord: {}", grid_coord * cell_size - self.head_position * cell_size);
 
-        segment.set_global_position(grid_coord * cell_size - self.head_position * cell_size);
         self.base_mut().add_child(&segment);
+        segment.set_global_position(grid_coord * cell_size);
         segment.set_owner(&self.to_gd());
 
         self.segments.push(segment);
