@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use crate::apple::Apple;
 use godot::classes::{Area2D, ColorRect, IArea2D, InputEvent};
 use godot::prelude::*;
@@ -17,7 +19,7 @@ enum Direction {
 struct Snake {
     head_position: Vector2,
     old_head_pos: Vector2,
-    segments: Vec<Gd<ColorRect>>,
+    segments: VecDeque<Gd<ColorRect>>,
     direction: Direction,
     old_direction: Direction,
     velocity: Vector2,
@@ -34,7 +36,7 @@ impl IArea2D for Snake {
         Self {
             head_position: Default::default(),
             old_head_pos: Default::default(),
-            segments: Vec::new(),
+            segments: VecDeque::new(),
             direction: Direction::None,
             old_direction: Direction::None,
             velocity: Default::default(),
@@ -66,7 +68,7 @@ impl IArea2D for Snake {
 
         head.set_global_position(head_pos_coord);
 
-        self.segments.push(head);
+        self.segments.push_front(head);
         self.base_mut().set_physics_process(false);
     }
 
@@ -120,15 +122,20 @@ impl IArea2D for Snake {
             };
             self.old_direction = self.direction;
         }
-        let head_pos = self.head_position;
-        self.old_head_pos = head_pos;
-        self.head_position += self.velocity;
+        self.old_head_pos = self.head_position;
+        self.head_position += self.velocity; // grid coord change
 
-        let velocity = self.head_position * Vector2::splat(CELL_SIZE);
+        let velocity = self.head_position * Vector2::splat(CELL_SIZE); // world coord
+        godot_print!("velocity : {:?}", velocity);
+        
+        // recup les anciennes pos
+        let pos = ;
 
         self.base_mut().set_global_position(velocity);
-        self.segments.first_mut().unwrap().set_global_position(velocity);
-        self.update_segment_pos();
+        self.segments
+            .get_mut(0)
+            .unwrap()
+            .set_global_position(velocity);
     }
 }
 
@@ -153,16 +160,10 @@ impl Snake {
 
         let last_segment = self
             .segments
-            .last()
+            .get(self.segments.len() - 1)
             .expect("The last segment doesn't exist.");
 
         let last_segment_position = convert_to_grid_coord(last_segment.get_global_position());
-
-        godot_print!(
-            "last segment world pos : {}",
-            last_segment.get_global_position()
-        );
-        godot_print!("last segment coord pos : {}", last_segment_position);
 
         let mut segment = ColorRect::new_alloc();
 
@@ -171,21 +172,13 @@ impl Snake {
 
         let grid_coord = opposite(&self.velocity) + last_segment_position;
 
-        godot_print!("seg grid coord: {}", grid_coord);
-        godot_print!("seg world coord: {}", grid_coord * cell_size - self.head_position * cell_size);
-
         self.base_mut().add_child(&segment);
-        segment.set_global_position(grid_coord * cell_size);
         segment.set_owner(&self.to_gd());
+        segment.set_global_position(grid_coord * cell_size);
 
-        self.segments.push(segment);
-    }
+        godot_print!("seg add pos : {}", segment.get_global_position());
 
-    fn update_segment_pos(&mut self) {
-        if self.segments.len() > 1 {
-            let headpos = self.old_head_pos * CELL_SIZE;
-            self.segments.iter_mut().nth(1).unwrap().set_global_position(headpos);
-        }
+        self.segments.push_back(segment);
     }
 
     fn _on_area_entered(&mut self, area: Gd<Area2D>) {
