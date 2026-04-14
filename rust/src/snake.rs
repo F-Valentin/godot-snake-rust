@@ -22,6 +22,7 @@ struct Snake {
     velocity: Vector2,
     time_since_last_move: f64,
     move_interval: f64,
+    can_change_dir: bool,
     base: Base<Area2D>,
 }
 
@@ -36,6 +37,7 @@ impl IArea2D for Snake {
             direction: Direction::None,
             old_direction: Direction::None,
             velocity: Default::default(),
+            can_change_dir: true,
             time_since_last_move: 0.,
             move_interval: 0.3,
             base,
@@ -69,6 +71,10 @@ impl IArea2D for Snake {
     }
 
     fn unhandled_input(&mut self, event: Gd<InputEvent>) {
+        if !self.can_change_dir {
+            return ;
+        }
+
         let direction = if event.is_action_pressed("ui_up") {
             Direction::Up
         } else if event.is_action_pressed("ui_down") {
@@ -87,14 +93,16 @@ impl IArea2D for Snake {
             return;
         }
 
-        if direction == Direction::None {
+        if direction == Direction::None || opposite_direction(&direction) == self.direction {
             return;
         }
 
         if direction != self.direction && self.direction != Direction::None {
             self.direction = direction;
+            self.can_change_dir = false;
         } else if self.direction == Direction::None && direction != Direction::None {
             self.direction = direction;
+            self.can_change_dir = false;
             self.base_mut().set_physics_process(true);
         }
     }
@@ -118,14 +126,46 @@ impl IArea2D for Snake {
             };
             self.old_direction = self.direction;
         }
-        let old_pos: Vec<Vector2> = self.segments.iter().map(|s| s.get_global_position()).collect();
+        let old_pos: Vec<Vector2> = self
+            .segments
+            .iter()
+            .map(|s| s.get_global_position())
+            .collect();
         self.head_position += self.velocity;
 
         let velocity = self.head_position * Vector2::splat(CELL_SIZE);
+        let viewport_rect = self.base().get_viewport_rect();
+
+
+
+        if velocity.x < 0.
+            || velocity.y < 0.
+            || velocity.x > viewport_rect.size.x - CELL_SIZE
+            || velocity.y > viewport_rect.size.y - CELL_SIZE
+        {
+            godot_print!("You're dead");
+            self.base_mut().set_physics_process(false);
+            return;
+        }
+
+        for &pos in &old_pos {
+            if pos == velocity {
+                godot_print!("You're dead");
+                self.base_mut().set_physics_process(false);
+                return;
+            }
+        }
 
         self.base_mut().set_global_position(velocity);
-        self.segments.first_mut().unwrap().set_global_position(velocity);
+
+
+
+        self.segments
+            .first_mut()
+            .unwrap()
+            .set_global_position(velocity);
         self.update_segment_pos(old_pos);
+        self.can_change_dir = true;
     }
 }
 
@@ -138,23 +178,12 @@ impl Snake {
             }
         }
 
-        fn opposite(unit_vector: &Vector2) -> Vector2 {
-            match *unit_vector {
-                Vector2::RIGHT => Vector2::LEFT,
-                Vector2::LEFT => Vector2::RIGHT,
-                Vector2::UP => Vector2::DOWN,
-                Vector2::DOWN => Vector2::UP,
-                _ => Default::default(),
-            }
-        }
-
         let last_segment = self
             .segments
             .last()
             .expect("The last segment doesn't exist.");
 
         let last_segment_position = convert_to_grid_coord(last_segment.get_global_position());
-
 
         let mut segment = ColorRect::new_alloc();
 
@@ -186,5 +215,25 @@ impl Snake {
                 obj.get_name().to_string()[.."apple".len()].to_lowercase()
             );
         }
+    }
+}
+
+fn opposite(unit_vector: &Vector2) -> Vector2 {
+    match *unit_vector {
+        Vector2::RIGHT => Vector2::LEFT,
+        Vector2::LEFT => Vector2::RIGHT,
+        Vector2::UP => Vector2::DOWN,
+        Vector2::DOWN => Vector2::UP,
+        _ => Default::default(),
+    }
+}
+
+fn opposite_direction(dir: &Direction) -> Direction {
+    match dir {
+        Direction::Down => Direction::Up,
+        Direction::Up => Direction::Down,
+        Direction::Right => Direction::Left,
+        Direction::Left => Direction::Right,
+        _ => Direction::None,
     }
 }

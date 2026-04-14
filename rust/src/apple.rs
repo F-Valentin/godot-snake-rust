@@ -14,3 +14,9 @@ impl IArea2D for Apple {
         Self { base }
     }
 }
+
+#[godot_api]
+impl Apple {
+    #[signal]
+    fn apple_ate();
+}
